@@ -1,27 +1,21 @@
 # [Nordlayer](https://nordlayer.com) VPN package for Linux (esp [ArchLinux](https://archlinux.org/))
 
-[![AUR version](https://img.shields.io/aur/version/nordlayer)](https://aur.archlinux.org/packages/nordlayer) [![Nordlayer version](https://img.shields.io/badge/nordlayer-3.2.2-green)](https://nordlayer.com/download/linux/)
+[![AUR version](https://img.shields.io/aur/version/nordlayer)](https://aur.archlinux.org/packages/nordlayer) [![Nordlayer version](https://img.shields.io/badge/nordlayer-3.4.3-green)](https://nordlayer.com/download/linux/)
 
-### Hotfix (Version 3.2.2) released by Nordlayer
+### Version tracking
 
-The new version should not break `nordlayer.db`
+The update script pulls the latest version from NordLayer's Debian repository metadata (the `Packages` index at `dists/stable/main/binary-amd64/Packages`). This is the primary source because it reflects exactly what's downloadable — the simple version API at `/linux/latest/version` can be stale and return versions whose `.deb` no longer exists.
 
-If you're still facing issues afterwards - repeat 2.6.4 version fix
-
-```sh
-rm /var/lib/nordlayer/nordlayer.db
-systemctl restart nordlayer
-nordlayer login
-```
+HTML scraping of the help page and the version API are kept as fallbacks. Every candidate version is checked with a HEAD request against the `.deb` download URL before being accepted.
 
 ### Important
 
 If you run into any errors feel free to create an [issue](https://github.com/raverecursion/nordlayer-latest/issues/new) or leave a comment [in AUR](https://aur.archlinux.org/packages/nordlayer-bin)
 
-To check latest official [nordlayer](https://nordlayer.com) version:
+To check the version currently in the Debian repo:
 
 ```sh
-curl https://downloads.nordlayer.com/linux/latest/version -w "\n"
+curl -s https://downloads.nordlayer.com/linux/latest/debian/dists/stable/main/binary-amd64/Packages | grep -m1 '^Version:'
 ```
 
 ---
