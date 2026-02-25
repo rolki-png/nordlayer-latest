@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   check-update:
@@ -37,15 +36,37 @@ jobs:
             echo "version=$version" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create Pull Request
+      - name: Commit and push to GitHub
         if: steps.changes.outputs.has_changes == 'true'
-        uses: peter-evans/create-pull-request@v7
-        with:
-          commit-message: "Update nordlayer to ${{ steps.changes.outputs.version }}"
-          title: "Update nordlayer to ${{ steps.changes.outputs.version }}"
-          body: |
-            Automated update of NordLayer package to version ${{ steps.changes.outputs.version }}.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update nordlayer to ${{ steps.changes.outputs.version }}"
+          git push
 
-            Changes made by the [update workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}).
-          branch: update/nordlayer-${{ steps.changes.outputs.version }}
-          delete-branch: true
+      - name: Push to AUR
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+          chmod 600 ~/.ssh/aur
+          cat >> ~/.ssh/config <<EOF
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur
+            User aur
+            StrictHostKeyChecking accept-new
+          EOF
+
+          git clone ssh://aur@aur.archlinux.org/nordlayer.git aur-repo
+          cp PKGBUILD .SRCINFO nordlayer.install aur-repo/
+          cd aur-repo
+          git config user.name "Roland Kiraly"
+          git config user.email "rolandgyulakiraly@outlook.com"
+          git add -A
+          git diff --cached --quiet || {
+            git commit -m "Update to ${{ steps.changes.outputs.version }}"
+            git push
+          }
