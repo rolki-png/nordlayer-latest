@@ -58,8 +58,13 @@ jobs:
           # Setup SSH
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
+
+          # Write key ensuring proper format (no trailing whitespace, proper newlines)
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
           chmod 600 ~/.ssh/aur
+
+          # Debug: show key type (first line only, safe to print)
+          head -1 ~/.ssh/aur
 
           cat > ~/.ssh/config << 'EOF'
           Host aur.archlinux.org
@@ -68,12 +73,18 @@ jobs:
             StrictHostKeyChecking accept-new
             ServerAliveInterval 60
             ServerAliveCountMax 3
+            ConnectionAttempts 3
+            ConnectTimeout 30
           EOF
           chmod 600 ~/.ssh/config
 
           # Start ssh-agent and add key
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/aur
+
+          # Test SSH connection
+          echo "Testing SSH connection to AUR..."
+          ssh -vT aur@aur.archlinux.org 2>&1 | head -30 || true
 
           # Function to push with retries
           push_with_retry() {
