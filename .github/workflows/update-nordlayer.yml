@@ -25,56 +25,62 @@ jobs:
       - name: Run update script
         run: python3 update_pkgbuild.py
 
-      - name: Check for changes
-        id: changes
+      - name: Check for upstream changes
+        id: upstream
         run: |
           if git diff --quiet; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
-            version=$(grep '^pkgver=' PKGBUILD | cut -d'=' -f2)
-            echo "version=$version" >> "$GITHUB_OUTPUT"
           fi
+          version=$(grep '^pkgver=' PKGBUILD | cut -d'=' -f2)
+          pkgrel=$(grep '^pkgrel=' PKGBUILD | cut -d'=' -f2)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "pkgrel=$pkgrel" >> "$GITHUB_OUTPUT"
 
       - name: Commit and push to GitHub
-        if: steps.changes.outputs.has_changes == 'true'
+        if: steps.upstream.outputs.has_changes == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add PKGBUILD .SRCINFO
-          git commit -m "Update nordlayer to ${{ steps.changes.outputs.version }}"
+          git commit -m "Update nordlayer to ${{ steps.upstream.outputs.version }}"
           git push
 
-      - name: Push to AUR
-        if: steps.changes.outputs.has_changes == 'true'
+      - name: Setup SSH for AUR
         env:
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
           chmod 600 ~/.ssh/aur
-          chmod 700 ~/.ssh
 
-          cat > ~/.ssh/config << 'SSHEOF'
+          cat > ~/.ssh/config << 'EOF'
           Host aur.archlinux.org
             IdentityFile ~/.ssh/aur
             User aur
             StrictHostKeyChecking accept-new
             ServerAliveInterval 60
             ServerAliveCountMax 3
-          SSHEOF
+          EOF
           chmod 600 ~/.ssh/config
 
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/aur
 
+      - name: Sync to AUR
+        run: |
           git clone ssh://aur@aur.archlinux.org/nordlayer.git aur-repo
           cp PKGBUILD .SRCINFO nordlayer.install aur-repo/
           cd aur-repo
           git config user.name "Roland Kiraly"
           git config user.email "rolandgyulakiraly@outlook.com"
           git add -A
-          git diff --cached --quiet || {
-            git commit -m "Update to ${{ steps.changes.outputs.version }}"
+          if git diff --cached --quiet; then
+            echo "AUR is already in sync"
+          else
+            git commit -m "Update to ${{ steps.upstream.outputs.version }}-${{ steps.upstream.outputs.pkgrel }}"
             git push
-          }
+            echo "Pushed to AUR"
+          fi
