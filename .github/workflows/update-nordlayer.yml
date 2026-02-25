@@ -53,12 +53,20 @@ jobs:
           mkdir -p ~/.ssh
           echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
           chmod 600 ~/.ssh/aur
-          cat >> ~/.ssh/config <<EOF
+          chmod 700 ~/.ssh
+
+          cat > ~/.ssh/config << 'SSHEOF'
           Host aur.archlinux.org
             IdentityFile ~/.ssh/aur
             User aur
             StrictHostKeyChecking accept-new
-          EOF
+            ServerAliveInterval 60
+            ServerAliveCountMax 3
+          SSHEOF
+          chmod 600 ~/.ssh/config
+
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/aur
 
           git clone ssh://aur@aur.archlinux.org/nordlayer.git aur-repo
           cp PKGBUILD .SRCINFO nordlayer.install aur-repo/
