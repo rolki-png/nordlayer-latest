@@ -21,52 +21,97 @@ def parse_version(version_str):
         return (0, 0, 0)
 
 
-def get_latest_version():
-    """Get the latest NordLayer version by scraping the help page, with API fallback."""
+SEMVER = re.compile(r'^\d+\.\d+\.\d+$')
+PACKAGES_URL = (
+    'https://downloads.nordlayer.com/linux/latest/debian/'
+    'dists/stable/main/binary-amd64/Packages'
+)
+HELP_URL = 'https://help.nordlayer.com/docs/linux'
+VERSION_FILE_URL = 'https://downloads.nordlayer.com/linux/latest/version'
+
+
+def version_from_debian_packages(text):
+    if not text:
+        return None
+    for block in re.split(r'\n\s*\n', text.strip()):
+        fields = {}
+        for line in block.splitlines():
+            if not line or line[0].isspace() or ':' not in line:
+                continue
+            key, value = line.split(':', 1)
+            fields[key] = value.strip()
+        if fields.get('Package') != 'nordlayer':
+            continue
+        upstream = fields.get('Version', '').split(':', 1)[-1].split('-', 1)[0]
+        if SEMVER.match(upstream):
+            return upstream
+    return None
+
+
+def select_published_version(packages_version, help_version, file_version):
+    for version in (packages_version, help_version, file_version):
+        if not version:
+            continue
+        candidate = version.strip()
+        if SEMVER.match(candidate):
+            return candidate
+    return None
+
+
+def _fetch_text(url, timeout):
     req_headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                       'AppleWebKit/537.36 (KHTML, like Gecko) '
                       'Chrome/58.0.3029.110 Safari/537.36'
     }
+    response = requests.get(url, headers=req_headers, timeout=timeout)
+    response.raise_for_status()
+    return response.text
 
+
+def fetch_packages_version():
     try:
-        response = requests.get(
-            'https://help.nordlayer.com/docs/linux',
-            headers=req_headers,
-            timeout=15,
-        )
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
+        return version_from_debian_packages(_fetch_text(PACKAGES_URL, 15))
+    except requests.RequestException:
+        return None
 
-        toc = soup.find('nav', {'aria-label': 'Table of contents'})
-        if toc:
-            first_link = toc.find('a')
-            if first_link:
-                text = first_link.get_text(strip=True)
-                match = re.search(r'Linux\s+(\d+\.\d+\.\d+)', text)
-                if match:
-                    return match.group(1)
 
-        for header in soup.find_all(['h1', 'h2', 'h3']):
-            text = header.get_text(strip=True)
-            match = re.search(r'Linux\s+(\d+\.\d+\.\d+)', text)
+def scrape_help_version():
+    try:
+        soup = BeautifulSoup(_fetch_text(HELP_URL, 15), 'html.parser')
+    except requests.RequestException:
+        return None
+
+    toc = soup.find('nav', {'aria-label': 'Table of contents'})
+    if toc:
+        first_link = toc.find('a')
+        if first_link:
+            match = re.search(r'Linux\s+(\d+\.\d+\.\d+)', first_link.get_text(strip=True))
             if match:
                 return match.group(1)
-    except requests.RequestException:
-        pass
 
-    try:
-        resp = requests.get(
-            'https://downloads.nordlayer.com/linux/latest/version', timeout=10
-        )
-        resp.raise_for_status()
-        version = resp.text.strip()
-        if re.match(r'^\d+\.\d+\.\d+$', version):
-            return version
-    except requests.RequestException:
-        pass
-
+    for header in soup.find_all(['h1', 'h2', 'h3']):
+        match = re.search(r'Linux\s+(\d+\.\d+\.\d+)', header.get_text(strip=True))
+        if match:
+            return match.group(1)
     return None
+
+
+def fetch_version_file():
+    try:
+        version = _fetch_text(VERSION_FILE_URL, 10).strip()
+    except requests.RequestException:
+        return None
+    if SEMVER.match(version):
+        return version
+    return None
+
+
+def get_latest_version():
+    packages_version = fetch_packages_version()
+    if packages_version:
+        return select_published_version(packages_version, None, None)
+    return select_published_version(None, scrape_help_version(), fetch_version_file())
 
 
 def get_current_version(pkg_dir):
