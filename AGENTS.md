@@ -11,13 +11,15 @@ This is an Arch Linux AUR packaging repo for NordLayer VPN. It contains:
 python3 update_pkgbuild.py
 ```
 
-The script's `update_srcinfo()` step calls `makepkg --printsrcinfo`, which is only available on Arch Linux. On Ubuntu-based cloud VMs this step will fail with `FileNotFoundError`. All other steps (version check, PKGBUILD update, `.deb` download, checksum) work fine.
+`generate_srcinfo()` in `update_pkgbuild.py` writes `.SRCINFO` from the PKGBUILD. It does not call `makepkg`.
 
-The `get_latest_version()` function scrapes HTML from `https://help.nordlayer.com/docs/linux` and can return `None` if the page structure changes or under rate-limiting. A reliable alternative for version checks is:
+`get_latest_version()` reads the `nordlayer` version from the Debian Packages index:
 
 ```
-curl https://downloads.nordlayer.com/linux/latest/version
+https://downloads.nordlayer.com/linux/latest/debian/dists/stable/main/binary-amd64/Packages
 ```
+
+The help page is the next source. `https://downloads.nordlayer.com/linux/latest/version` still returns `3.3.2` from 2024, and that `.deb` returns 404.
 
 ### Lint checks
 
