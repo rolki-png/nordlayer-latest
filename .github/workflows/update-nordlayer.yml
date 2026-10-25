@@ -47,6 +47,23 @@ jobs:
           git commit -m "Update nordlayer to ${{ steps.upstream.outputs.version }}"
           git push
 
+      - name: Keep the schedule from going idle
+        if: steps.upstream.outputs.has_changes != 'true'
+        run: |
+          # GitHub turns this schedule off after 60 days with no commit.
+          # Commit halfway through that window so a missed week still counts.
+          last=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          age_days=$(( (now - last) / 86400 ))
+          echo "Last commit age: ${age_days} days"
+          if [ "$age_days" -lt 30 ]; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "Keep scheduled updates enabled"
+          git push
+
       - name: Sync to AUR
         env:
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
