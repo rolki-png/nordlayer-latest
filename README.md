@@ -2,6 +2,8 @@
 
 Unofficial Arch packages for the NordLayer Linux client.
 
+Maintained by Roland Kiraly. This started as a fork of [akumaburn/nordlayer-latest](https://github.com/akumaburn/nordlayer-latest), which has had no commits since February 2024, and has been rewritten since. A daily GitHub Actions job checks for new NordLayer releases and updates both packages, the update script has tests, and `nordlayer-bin` is new.
+
 [![AUR version](https://img.shields.io/aur/version/nordlayer)](https://aur.archlinux.org/packages/nordlayer)
 
 `nordlayer` and `nordlayer-bin` install the same client and conflict with each other. Install one of them.
