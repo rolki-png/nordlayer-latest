@@ -8,6 +8,8 @@ on:
 permissions:
   contents: write
 
+concurrency: update-nordlayer
+
 jobs:
   check-update:
     runs-on: ubuntu-latest
@@ -15,20 +17,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      - name: Install dependencies
-        run: pip install requests beautifulsoup4
-
-      - name: Run update script
+      - name: Point the PKGBUILDs at the newest upstream .deb
         run: python3 update_pkgbuild.py
+
+      - name: Build both packages with makepkg and regenerate .SRCINFO
+        run: ./build-in-arch.sh
 
       - name: Check for upstream changes
         id: upstream
         run: |
-          if git diff --quiet; then
+          if git diff --quiet -- PKGBUILD .SRCINFO nordlayer-bin/PKGBUILD nordlayer-bin/.SRCINFO; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
