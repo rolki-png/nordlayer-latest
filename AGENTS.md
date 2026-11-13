@@ -21,6 +21,10 @@ https://downloads.nordlayer.com/linux/latest/debian/dists/stable/main/binary-amd
 
 The help page is the next source. `https://downloads.nordlayer.com/linux/latest/version` still returns `3.3.2` from 2024, and that `.deb` returns 404.
 
+### Running the tests
+
+`python3 -m unittest -v` runs `test_update_pkgbuild.py`. It needs the dependencies listed below. The `Test` workflow runs it, plus the `py_compile` check, on pushes to `master` and on pull requests.
+
 ### Lint checks
 
 - **Shell scripts**: `bash -n PKGBUILD && bash -n nordlayer.install` for syntax; `shellcheck nordlayer.install` for style (SC2148 about missing shebang is expected — `.install` files are sourced by `makepkg`). Shellcheck warnings on `PKGBUILD` about "unused" variables are false positives (variables are consumed by `makepkg`).
