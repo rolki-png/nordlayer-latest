@@ -13,7 +13,7 @@ depends=('bash' 'libgcrypt' 'libgpg-error' 'libcap' 'hicolor-icon-theme' 'gmp' '
 options=('!strip' '!emptydirs')
 install=${pkgname}.install
 source_x86_64=("https://downloads.nordlayer.com/linux/latest/debian/pool/main/nordlayer_${pkgver}_amd64.deb")
-sha512sums_x86_64=('b45605d31dabdf90ce3432614acda69de7d8eaeb21f7ff2bce627cc8e6ffcdc4604dca9a417dda3caa730f4b3d4878b09adc66936a64a95c180485314ab04f3a')
+sha256sums_x86_64=('037ff798826c3a453bd77b2ccd1e811c280a4205347a4a41a4f97791c3a3a9d2')
 
 package() {
     cd "${srcdir}"

@@ -15,15 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      - name: Install dependencies
-        run: pip install requests beautifulsoup4
-
-      - name: Compile check
-        run: python -c "import py_compile; py_compile.compile('update_pkgbuild.py', doraise=True)"
-
       - name: Unit tests
-        run: python -m unittest -v
+        run: python3 -m unittest -v
+
+      - name: Build both packages with makepkg
+        run: ./build-in-arch.sh
+
+      - name: .SRCINFO matches makepkg --printsrcinfo
+        run: git diff --exit-code -- .SRCINFO nordlayer-bin/.SRCINFO
